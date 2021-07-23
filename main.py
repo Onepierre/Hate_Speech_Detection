@@ -85,10 +85,19 @@ class CustomBERTModel(nn.Module):
           #     param.requires_grad = False
           ### New layers:
           self.dropout = nn.Dropout(0.1)
-          self.classifier = nn.Linear(768, 256)
 
-          self.classifier2 = nn.Linear(256, 3) ## 3 is the number of classes in this example
-          """Initialize the weights"""
+          # self.classifier = nn.Linear(768, 256)
+          # self.classifier2 = nn.Linear(256, 3) ## 3 is the number of classes in this example
+
+          self.classifier = nn.Sequential(
+            nn.Linear(768, 50),
+            nn.ReLU(),
+            #nn.Dropout(0.5),
+            nn.Linear(50, 3)
+        )
+
+
+          #Initialize the weights
 
           for module in self.children():
             if isinstance(module, nn.Linear):
@@ -131,10 +140,11 @@ class CustomBERTModel(nn.Module):
         )
 
         pooled_output = outputs[1]
-        pooled_output = self.dropout(pooled_output)
-        temp_output = F.relu(self.classifier(pooled_output))
-        
-        logits = self.classifier2(temp_output)
+        logits = self.classifier(pooled_output)
+
+        # pooled_output = self.dropout(pooled_output)
+        # temp_output = F.relu(self.classifier(pooled_output))
+        # logits = self.classifier2(temp_output)
 
         loss = None
 
@@ -166,7 +176,7 @@ if __name__ == "__main__":
   """# Train"""
 
 
-
+  epochs = [0,1,2]
   model = CustomBERTModel() # You can pass the parameters if required to have more flexible model
   
   #device = torch.device("cpu")
@@ -212,51 +222,48 @@ if __name__ == "__main__":
                   "linear",
                   optimizer,
                   num_warmup_steps=500,
-                  num_training_steps=nb_chunks,
+                  num_training_steps=nb_chunks*len(epochs),
               )
 
-
-  printProgressBar(0, nb_chunks, prefix = 'Progress:', suffix = 'Complete', length = 50)
-
-
   # Begin the training
-  epochs = [0]
+  
   model.train()
   #model.zero_grad() 
   t0 = time.time()
   for epoch in epochs:
-      counter = 0
-      count_loss = 0
-      for batch in chunks(data_loader,8): ## If you have a DataLoader()  object to get the data.
-          
-          
-          #model.zero_grad() 
-          counter += 1
-          t1 = time.time()
-          t_done = t1-t0
-          printProgressBar(counter, nb_chunks, prefix = 'Progress:', suffix = 'Complete', length = 50,t_done = t_done)
-          if counter%100==0:
-              
-              model.eval()
-              print(str( 8*counter) + "/" + str(len(data_loader)))
-              validation_score(model,tokenizer,test_loader)
-              print("Train Loss: " + str(count_loss/100))
-              count_loss = 0
-          data = [sent for sent,id in batch]
-          targets = torch.tensor([id for sent,id in batch])## assuming that data loader returns a tuple of data and its targets
+    print("\nEpoch: " + str(epoch) + "\n")
+    counter = 0
+    count_loss = 0
+    for batch in chunks(data_loader,8): ## If you have a DataLoader()  object to get the data.
+        
+        
+        #model.zero_grad() 
+        counter += 1
+        t1 = time.time()
+        t_done = t1-t0
+        printProgressBar(counter, nb_chunks, prefix = 'Progress:', suffix = 'Complete', length = 50,t_done = t_done)
+        if counter%100==0:
+            
+            model.eval()
+            print(str( 8*counter) + "/" + str(len(data_loader)))
+            validation_score(model,tokenizer,test_loader)
+            print("Train Loss: " + str(count_loss/100))
+            count_loss = 0
+        data = [sent for sent,id in batch]
+        targets = torch.tensor([id for sent,id in batch])## assuming that data loader returns a tuple of data and its targets
 
-          encoding = tokenizer.batch_encode_plus(data, return_tensors='pt', padding=True, truncation=True, max_length=512)
+        encoding = tokenizer.batch_encode_plus(data, return_tensors='pt', padding=True, truncation=True, max_length=512)
 
-          model.train()
-          optimizer.zero_grad() 
-          
-          loss, outputs = model(**encoding,labels = targets)
-          nn.utils.clip_grad_norm_(model.parameters(),1.0,)
-          outputs = F.softmax(outputs, dim=1)
+        model.train()
+        optimizer.zero_grad() 
+        
+        loss, outputs = model(**encoding,labels = targets)
+        nn.utils.clip_grad_norm_(model.parameters(),1.0,)
+        outputs = F.softmax(outputs, dim=1)
 
 
-          loss.backward()
-          count_loss += loss.item()
-          optimizer.step()
-          lr_scheduler.step()
+        loss.backward()
+        count_loss += loss.item()
+        optimizer.step()
+        lr_scheduler.step()
 
