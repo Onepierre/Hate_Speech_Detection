@@ -167,9 +167,6 @@ def test():
     score_predict = []
 
     for i,text in enumerate(valid_texts):
-        count += 1
-        if count > 200000:
-            break
         probs, pred = get_prediction(text,model,tokenizer)
         label_predict.append(pred)
         score_predict.append(probs.detach().numpy()[0])
