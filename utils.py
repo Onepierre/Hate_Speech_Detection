@@ -1,8 +1,6 @@
 
 from datasets import load_dataset
 import numpy as np
-from transformers import BertTokenizer,BertTokenizerFast
-from transformers import BertModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -61,7 +59,13 @@ def convert_dataset_to_list(df):
     labels_list.append(value)
   return sentences_list,labels_list
 
-def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,batch_valid):
+def get_hatexplain_data(name):
+  # name = 'test' or 'train'
+  dataset_test = load_dataset('hatexplain', split=name)
+  valid_texts, valid_labels = convert_dataset_to_list(dataset_test)
+  return [(valid_texts[i],valid_labels[i]) for i in range(len(valid_texts))]
+
+def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,batch_valid,best_loss):
 
 
   print(str( 8*counter) + "/" + str(len(data_loader)))
@@ -76,8 +80,7 @@ def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,
   nb_chunks_val = ceil(len(test_loader)/20)
   chunk = chunks(test_loader,20)
 
-  print("Test val")
-  printProgressBar(0, nb_chunks_val, prefix = 'Progress:', suffix = 'Complete', length = 50)
+  print("Score on test dataset\n")
   count = 0
   t0_test = time.time()
   for batch in chunk:
@@ -88,7 +91,7 @@ def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,
     count += 1 
     t1_test = time.time()
     t_done_test = t1_test-t0_test
-    printProgressBar(count, nb_chunks_val, prefix = 'Progress:', suffix = 'Complete', length = 50, t_done=t_done_test)  
+    printProgressBar(count, nb_chunks_val, prefix = 'Progress:', suffix = '', length = 50, t_done=t_done_test)  
     data = [sent for sent,id in batch]
 
     with torch.no_grad():  
@@ -105,6 +108,35 @@ def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,
   print("Accuracy: " + str(juste/len(out)))
   print("Test Loss: " + str(np.mean(np.array(loss_sum))))
   print("Train Loss: " + str(count_loss/batch_valid))
+  if best_loss > np.mean(np.array(loss_sum)):
+    best_loss = np.mean(np.array(loss_sum))
+    torch.save(model.state_dict(), "model_save/model.ckpt")
+    print("Model saved")
+  return best_loss
 
+def get_optimizer(model):
+  # Retur adamW optimizer for bert custom model
+  # I used AdamW from transformers
+  decay_parameters = get_parameter_names(model, [nn.LayerNorm])
+  decay_parameters = [name for name in decay_parameters if "bias" not in name]
 
+  optimizer_grouped_parameters = [
+      {
+          "params": [p for n, p in model.named_parameters() if n in decay_parameters],
+          "weight_decay": 0.1,
+      },
+      {
+          "params": [p for n, p in model.named_parameters() if n not in decay_parameters],
+          "weight_decay": 0.0,
+      },
+  ]
+
+  optimizer_kwargs = {
+      "betas":  (0.9, 0.999),
+      "eps": 1e-8,
+      "lr": 5e-05,
+  }
+  
+
+  return AdamW(optimizer_grouped_parameters, **optimizer_kwargs)
 
