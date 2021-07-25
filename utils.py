@@ -80,7 +80,7 @@ def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,
   nb_chunks_val = ceil(len(test_loader)/20)
   chunk = chunks(test_loader,20)
 
-  print("Score on test dataset\n")
+  print("\nScore on test dataset")
   count = 0
   t0_test = time.time()
   for batch in chunk:

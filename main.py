@@ -85,4 +85,4 @@ if __name__ == "__main__":
   lr_scheduler = get_scheduler("linear", optimizer, num_warmup_steps=500, num_training_steps=nb_chunks*len(epochs),)
 
   # Begin the training
-  train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,80)
+  train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,100)
