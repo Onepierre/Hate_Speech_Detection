@@ -50,26 +50,29 @@ def train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,batch_vali
         count_loss += loss.item()
         optimizer.step()
         lr_scheduler.step()
-
+  validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,batch_valid,best_loss)
+  print("Training ended")
 
 
 if __name__ == "__main__":
 
   
   """# Data loading"""
-  # data_loader = get_hatexplain_data('train')
-  # test_loader = get_hatexplain_data('test')
+  language = "en"
+  if language == "en":
+    data_loader = get_hatexplain_data('train')
+    test_loader = get_hatexplain_data('test')
+    model_name = "bert-base-uncased"
+    model_name = "roberta-base"
 
-  data_loader,test_loader = loader()
+  if language == "fr":
+    data_loader,test_loader = loader()
+    model_name = "camembert-base"
 
   nb_chunks = ceil(len(data_loader)/8)
-
-  """# Tokenizer"""
-  model_name = "bert-base-uncased"
-  model_name = "camembert-base"
   tokenizer = RobertaTokenizerFast.from_pretrained(model_name, do_lower_case=True)
 
-  """# Train"""
+
   epochs = [0,1,2]
   model = CustomRoBERTaModel(bert_name  = model_name) 
   #device = torch.device("cpu")
@@ -82,4 +85,4 @@ if __name__ == "__main__":
   lr_scheduler = get_scheduler("linear", optimizer, num_warmup_steps=500, num_training_steps=nb_chunks*len(epochs),)
 
   # Begin the training
-  train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,40)
+  train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,80)

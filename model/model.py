@@ -84,8 +84,10 @@ class CustomBERTModel(nn.Module):
 class CustomRoBERTaModel(nn.Module):
     def __init__(self,bert_name = "camembert-base"):
         super(CustomRoBERTaModel, self).__init__()
-
-        self.bert = RobertaModel.from_pretrained(bert_name)      
+        if bert_name == "roberta-base":
+            self.bert = RobertaModel.from_pretrained("pretrained_models/roberta_base_pytorch")  
+        else:    
+            self.bert = RobertaModel.from_pretrained(bert_name)      
 
           ### New layers:
         self.dropout = nn.Dropout(0.1)
@@ -93,10 +95,13 @@ class CustomRoBERTaModel(nn.Module):
           # self.classifier = nn.Linear(768, 256)
           # self.classifier2 = nn.Linear(256, 3) ## 3 is the number of classes in this example
 
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(768, 50),
+        #     nn.ReLU(),
+        #     nn.Linear(50, 3)
+        # )
         self.classifier = nn.Sequential(
-            nn.Linear(768, 50),
-            nn.ReLU(),
-            nn.Linear(50, 3)
+            nn.Linear(768, 3)
         )
 
 
