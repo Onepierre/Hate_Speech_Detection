@@ -114,7 +114,7 @@ def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,
     print("Model saved")
   return best_loss
 
-def get_optimizer(model):
+def get_optimizer(model,lr = 5e-05):
   # Retur adamW optimizer for bert custom model
   # I used AdamW from transformers
   decay_parameters = get_parameter_names(model, [nn.LayerNorm])
@@ -134,7 +134,7 @@ def get_optimizer(model):
   optimizer_kwargs = {
       "betas":  (0.9, 0.999),
       "eps": 1e-8,
-      "lr": 5e-05,
+      "lr": lr,
   }
   
 
