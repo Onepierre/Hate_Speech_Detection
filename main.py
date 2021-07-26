@@ -1,3 +1,4 @@
+from logging import raiseExceptions
 from transformers import BertTokenizerFast,RobertaTokenizerFast
 import torch
 import torch.nn as nn
@@ -7,24 +8,33 @@ from transformers.trainer_pt_utils import get_parameter_names
 from math import ceil
 import time
 from utils import *
-from model.model import CustomBERTModel,CustomRoBERTaModel
+from model.model import CustomBERTModel,CustomRoBERTaModel,CustomCamemBERTModel
 from load_fr_dataset import loader
 
-def train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,batch_valid):
+def train(model,tokenizer,optimizer,lr_scheduler,test_loader,data_loader,epochs,batch_valid, resume_training = None):
   model.train()
+  nb_chunks = ceil(len(data_loader)/8)
   best_loss = 1000.0
-  #model.zero_grad() 
-  
+  #model.zero_grad()
+  if not resume_training == None: 
+    new_epoch = resume_training["epoch"]
+    new_turn = resume_training["batch"]
   for epoch in epochs:
+
     t0 = time.time()
     print("\nEpoch: " + str(epoch+1) + "\n")
     counter = 0
     count_loss = 0
     for batch in chunks(data_loader,8):
         counter += 1
-        
         t1 = time.time()
         printProgressBar(counter, nb_chunks, prefix = 'Progress:', suffix = '', length = 50,t_done = t1-t0)
+        if not resume_training == None:
+          if new_epoch > epoch or (new_epoch == epoch and new_turn/8 >= counter):
+            optimizer.step()
+            lr_scheduler.step()
+            continue
+        
 
         if counter%batch_valid==0:
             best_loss = validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,batch_valid,best_loss)
@@ -54,11 +64,20 @@ def train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,batch_vali
   print("Training ended")
 
 
-if __name__ == "__main__":
+def do_training(checkpoint = None, epoch = -1, batch = -2):
+  if checkpoint == None or epoch == -1 or batch == -2:
+    print("Starting training from the beginning. If this is not wanted, you may have forgotten arguments")
+    checkpoint = None
+    epoch = 0
+    batch = -1
+  else:
+    print("Resume training from epoch " + str(epoch)+" and input " + str(batch))
+    epoch = epoch -1
 
-  
+  resume_training = {"epoch":epoch,"batch":batch}
+
   """# Data loading"""
-  language = "en"
+  language = "fr"
   if language == "en":
     data_loader = get_hatexplain_data('train')
     test_loader = get_hatexplain_data('test')
@@ -70,19 +89,35 @@ if __name__ == "__main__":
     model_name = "camembert-base"
 
   nb_chunks = ceil(len(data_loader)/8)
+
+  #tokenizer = BertTokenizerFast.from_pretrained(model_name, do_lower_case=True)
   tokenizer = RobertaTokenizerFast.from_pretrained(model_name, do_lower_case=True)
 
-
-  epochs = [0,1,2]
-  model = CustomRoBERTaModel(bert_name  = model_name) 
+  #model = CustomBERTModel(bert_name  = model_name) 
+  #model = CustomRoBERTaModel(bert_name  = model_name) 
+  model = CustomCamemBERTModel() 
+  if not checkpoint == None:
+    model.load_state_dict(torch.load(checkpoint))
   #device = torch.device("cpu")
   #model.to(device) ## if gpu
 
+  epochs = [0,1,2]
 
-  optimizer = get_optimizer(model)
+  # Load optimizer
+  optimizer = get_optimizer(model,5e-05)
 
   # Use scheduler from transformers library
-  lr_scheduler = get_scheduler("linear", optimizer, num_warmup_steps=500, num_training_steps=nb_chunks*len(epochs),)
+  lr_scheduler = get_scheduler("linear", optimizer, num_warmup_steps=100, num_training_steps=nb_chunks*len(epochs),)
 
-  # Begin the training
-  train(model,optimizer,lr_scheduler,test_loader,data_loader,epochs,100)
+  # Do the training
+  train(model,tokenizer,optimizer,lr_scheduler,test_loader,data_loader,epochs,80,resume_training)
+  
+
+
+
+if __name__ == "__main__":
+  # TRAINING EXAMPLE
+  # checkpoint = "model_save/model.ckpt"
+  # epoch = 1
+  # batch = 4800
+  do_training()
