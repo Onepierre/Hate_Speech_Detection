@@ -57,7 +57,7 @@ def loader():
     msk = np.random.rand(len(data)) < 0.85
     train_loader = [(data.loc[i,"tweet"],data.loc[i,"sentiment"]) for i in range(len(msk)) if msk[i]]
     test_loader = [(data.loc[i,"tweet"],data.loc[i,"sentiment"]) for i in range(len(msk)) if not msk[i]]
-    equilibrate(train_loader)
+    #equilibrate(train_loader)
     return train_loader, test_loader
 
 
