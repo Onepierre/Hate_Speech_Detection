@@ -90,7 +90,7 @@ if __name__ == "__main__":
             sentences.append(i)
 
         #sentences = ["Je deteste les arabes","Je deteste les noirs","Je deteste les chinois","Je deteste les blancs","Les arabes sont dangereux","J'aime pas les sales noirs","je suis arabe","j'aime le chocolat", "ce mec est un turbo débile","tu es un colossal étron","tu es génial", "les africains sont intelligents", "les africains sont méchants", "les africains sont nuls"]
-        sentences = ["Et là, il suffit de dériver","On utilise le théorème de Pythagore"]
+        sentences = ["Et là, il suffit de dériver","On utilise le théorème de Pythagore","On dit Lazos, pas Lazaux"]
         logits = predict(sentences)
         print(logits)
         for i in range(len(logits)):
