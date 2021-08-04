@@ -97,15 +97,29 @@ def validation_score(model,tokenizer,test_loader,data_loader,counter,count_loss,
     with torch.no_grad():  
       encoding = tokenizer.batch_encode_plus(data, return_tensors='pt', padding=True, truncation=True,max_length=512)
       loss, outputs = model(**encoding,labels = torch.tensor(target_temp))
-      outputs = F.softmax(outputs, dim=1)
       loss_sum.append(loss.item())
     for i in outputs:
-      out.append(i.numpy())
+      out.append(torch.sigmoid(i).numpy())
 
+  # For single label classification
   for i,a in enumerate(out):
     if a.argmax() == targets[i]:
       juste += 1
   print("Accuracy: " + str(juste/len(out)))
+
+  # For multi label clasification
+  # length = len(out[0])
+  # juste = [0] * length
+  # for i,a in enumerate(out):
+  #   for j,b in enumerate(a):
+  #     res = 0
+  #     if b > 0.5:
+  #       res = 1
+  #     if res == targets[i][j]:
+  #       juste[j] += 1/len(out)
+  # print("Accuracy: " + str(juste))
+
+
   print("Test Loss: " + str(np.mean(np.array(loss_sum))))
   print("Train Loss: " + str(count_loss/batch_valid))
   if best_loss > np.mean(np.array(loss_sum)):
