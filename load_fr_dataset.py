@@ -24,6 +24,34 @@ def convert():
     readable = readable[readable.sentiment != -1]
     readable.to_csv("datasets/fr_dataset_cleared_2.csv")
 
+def convert2():
+    data = pd.read_csv("datasets/fr_dataset.csv")
+    readable = data[["tweet","sentiment"]].copy()
+    print(readable["sentiment"].unique())
+    for i,line in readable.iterrows():
+        readable.at[i,"abusive"] = 0
+        readable.at[i,"offensive"] = 0
+        readable.at[i,"hateful"] = 0
+        readable.at[i,"fearful"] = 0
+        readable.at[i,"disrespectful"] = 0
+
+        if "offensive" in line["sentiment"]:
+            readable.at[i,"offensive"] = 1
+        if "abusive" in line["sentiment"]:
+            readable.at[i,"abusive"] = 1
+        if "hateful" in line["sentiment"]:
+            readable.at[i,"hateful"] = 1
+        if "fearful" in line["sentiment"]:
+            readable.at[i,"fearful"] = 1
+        if "disrespectful" in line["sentiment"]:
+            readable.at[i,"disrespectful"] = 1
+
+
+    print(readable.head())
+    readable = readable[readable.hateful != -1]
+    readable = readable[readable.offensive != -1]
+    readable.to_csv("datasets/fr_dataset_multi_label.csv")
+
 def equilibrate(load):
     counter = []
     l = [[],[],[]]
@@ -60,6 +88,15 @@ def loader():
     #equilibrate(train_loader)
     return train_loader, test_loader
 
+def loader_multi_label():
+    data = pd.read_csv("datasets/fr_dataset_multi_label.csv")
+    msk = np.random.rand(len(data)) < 0.85
+    #[data.loc[i,"abusive"],data.loc[i,"offensive"],data.loc[i,"hateful"],data.loc[i,"fearful"],data.loc[i,"disrespectful"]]
+    train_loader = [(data.loc[i,"tweet"],[data.loc[i,"abusive"],data.loc[i,"offensive"],data.loc[i,"hateful"],data.loc[i,"fearful"],data.loc[i,"disrespectful"]]) for i in range(len(msk)) if msk[i]]
+    test_loader = [(data.loc[i,"tweet"],[data.loc[i,"abusive"],data.loc[i,"offensive"],data.loc[i,"hateful"],data.loc[i,"fearful"],data.loc[i,"disrespectful"]]) for i in range(len(msk)) if not msk[i]]
+    #equilibrate(train_loader)
+    return train_loader, test_loader
+
 
 if __name__ == "__main__":
-    convert()
+    convert2()
